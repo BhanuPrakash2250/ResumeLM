@@ -81,7 +81,7 @@ export function CreatorStory() {
               
               <div className="space-y-4 text-lg text-slate-800 leading-relaxed">
                 <p>
-  Hi, I'm Bhanu Prakash! I'm a developer passionate about building practical AI-powered tools that make the job-search process easier.
+Hi, I&apos;m Bhanu Prakash! I&apos;m a developer passionate about building practical AI-powered tools that make the job-search process easier.
 </p>
                 <p>
                   ResumeLM is an open-source AI resume builder designed to help developers and job seekers create ATS-aware resumes, tailor their resumes to job descriptions, and improve their chances of landing tech jobs.
