@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+build/
+
+# Environment / secrets
+.env*
+!.env.example
+
+# Supabase local development
+.supabase/
+supabase/.temp/
+
+# Docker local overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Cache
+.cache/
+.turbo/
+.eslintcache
+
+# Local IDE / editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary / generated files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel/
+
+# Local certificates / private keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Project-specific AI/editor files
+.cursorrules
+.aider*

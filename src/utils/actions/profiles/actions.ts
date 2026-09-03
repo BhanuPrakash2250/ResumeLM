@@ -1,0 +1,188 @@
+'use server';
+
+import { Profile } from "@/lib/types";
+import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
+import { AnalyticsEvents } from "@/lib/analytics/events";
+import {
+  captureServerAnalyticsEvent,
+  getAccessAnalyticsProperties,
+} from "@/lib/analytics/server";
+import { getAnonymousUser } from "@/utils/actions";
+import { createEmptyProfile } from "@/lib/profile";
+
+function isProfileComplete(profile: Partial<Profile> | null | undefined) {
+  return Boolean(profile?.first_name && profile?.last_name && profile?.email);
+}
+
+async function captureProfileCompletionIfNeeded(input: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  previousProfile: Partial<Profile> | null | undefined;
+  profile: Partial<Profile> | null | undefined;
+}) {
+  if (isProfileComplete(input.previousProfile) || !isProfileComplete(input.profile)) {
+    return;
+  }
+
+  const properties = await getAccessAnalyticsProperties(input.supabase, input.userId);
+  await captureServerAnalyticsEvent({
+    distinctId: input.userId,
+    event: AnalyticsEvents.OnboardingCompleted,
+    insertId: `${input.userId}:${AnalyticsEvents.OnboardingCompleted}`,
+    properties,
+  });
+  await captureServerAnalyticsEvent({
+    distinctId: input.userId,
+    event: AnalyticsEvents.ProfileCompleted,
+    insertId: `${input.userId}:${AnalyticsEvents.ProfileCompleted}`,
+    properties,
+  });
+}
+
+export async function updateProfile(data: Partial<Profile>): Promise<Profile> {
+  const supabase = await createClient();
+  const user = await getAnonymousUser();
+
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, email')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .upsert({ ...data, user_id: user.id }, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update profile: ${error.message}`);
+  }
+
+  await captureProfileCompletionIfNeeded({
+    supabase,
+    userId: user.id,
+    previousProfile: currentProfile,
+    profile,
+  });
+
+  // Revalidate all routes that might display profile data
+  revalidatePath('/', 'layout');
+  revalidatePath('/profile/edit', 'layout');
+  revalidatePath('/resumes', 'layout');
+  revalidatePath('/profile', 'layout');
+
+  return profile;
+}
+
+export async function importResume(data: Partial<Profile>): Promise<Profile> {
+  const supabase = await createClient();
+  const user = await getAnonymousUser();
+
+  // First, get the current profile
+  const { data: storedProfile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (fetchError) {
+    void fetchError
+    throw new Error(`Failed to fetch current profile: ${fetchError.message}`);
+  }
+  const currentProfile = storedProfile ?? createEmptyProfile(user.id);
+
+  // Prepare the update data
+  const updateData: Partial<Profile> = {};
+
+  // Handle simple string fields - only update if current value is null/empty
+  const simpleFields = ['first_name', 'last_name', 'email', 'phone_number', 
+    'location', 'website', 'linkedin_url', 'github_url'] as const;
+  
+  simpleFields.forEach((field) => {
+    if (data[field] !== undefined) {
+      // Only update if current value is null or empty string
+      if (!currentProfile[field]) {
+        updateData[field] = data[field];
+      }
+    }
+  });
+
+  // Handle array fields - append to existing arrays
+  const arrayFields = ['work_experience', 'education', 'skills', 
+    'projects'] as const;
+  
+  arrayFields.forEach((field) => {
+    if (data[field]?.length) {
+      // Simply append new items to the existing array
+      updateData[field] = [
+        ...(currentProfile[field] || []),
+        ...data[field]
+      ];
+    }
+  });
+
+  // Only proceed with update if there are changes
+  if (Object.keys(updateData).length === 0) {
+    return currentProfile;
+  }
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .upsert({ ...updateData, user_id: user.id }, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update profile: ${error.message}`);
+  }
+
+  await captureProfileCompletionIfNeeded({
+    supabase,
+    userId: user.id,
+    previousProfile: currentProfile,
+    profile,
+  });
+
+  // Revalidate all routes that might display profile data
+  revalidatePath('/', 'layout');
+  revalidatePath('/profile/edit', 'layout');
+  revalidatePath('/resumes', 'layout');
+  revalidatePath('/profile', 'layout');
+
+  return profile;
+}
+
+
+export async function resetProfile(): Promise<Profile> {
+  const supabase = await createClient();
+  const user = await getAnonymousUser();
+
+  const emptyProfile: Partial<Profile> = {
+    first_name: null,
+    last_name: null,
+    email: null,
+    phone_number: null,
+    location: null,
+    website: null,
+    linkedin_url: null,
+    github_url: null,
+    work_experience: [],
+    education: [],
+    skills: [],
+    projects: [],
+  };
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .upsert({ ...emptyProfile, user_id: user.id }, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error('Failed to reset profile');
+  }
+
+  return profile;
+}

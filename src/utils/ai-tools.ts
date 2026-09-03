@@ -1,0 +1,83 @@
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { LanguageModelV1, wrapLanguageModel } from 'ai';
+import { type AIConfig } from '@/lib/ai-models';
+import {
+  resolveAIRequest,
+  type ResolvedAIRequest,
+} from '@/lib/ai/access-control';
+import { createAIModelReliabilityMiddleware } from '@/lib/ai/reliability';
+
+// Re-export types for backward compatibility
+export type { ApiKey, AIConfig } from '@/lib/ai-models';
+
+export function createAIClientFromResolvedRequest(
+  resolved: ResolvedAIRequest,
+  useThinking?: boolean
+) {
+  void useThinking; // Keep for future use
+
+  let baseModel: LanguageModelV1;
+
+  switch (resolved.providerId) {
+    case 'anthropic':
+      baseModel = createAnthropic({ apiKey: resolved.apiKey })(resolved.modelId) as LanguageModelV1;
+      break;
+    
+    case 'openai':
+      baseModel = createOpenAI({
+        apiKey: resolved.apiKey,
+        compatibility: 'strict'
+      })(resolved.modelId) as LanguageModelV1;
+      break;
+    
+    case 'openrouter':
+      baseModel = createOpenRouter({
+        apiKey: resolved.apiKey,
+        baseURL: 'https://openrouter.ai/api/v1',
+        headers: {
+          'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+          'X-Title': 'ResumeLM'
+        }
+      })(resolved.modelId) as LanguageModelV1;
+      break;
+    
+    default:
+      throw new Error(`Unsupported provider: ${resolved.providerId}`);
+  }
+
+  return wrapLanguageModel({
+    model: baseModel,
+    middleware: createAIModelReliabilityMiddleware({
+      providerId: resolved.providerId,
+      modelId: resolved.modelId,
+      apiKey: resolved.apiKey,
+      usedServerKey: resolved.usedServerKey,
+    }),
+  });
+}
+
+export function resolveAIClient(config?: AIConfig, isPro?: boolean, useThinking?: boolean) {
+  if (!config) {
+    throw new Error('AI model is required');
+  }
+
+  const resolved = resolveAIRequest({
+    requestedModel: config.model,
+    apiKeys: config.apiKeys ?? [],
+    isPro: Boolean(isPro),
+  });
+
+  return {
+    model: createAIClientFromResolvedRequest(resolved, useThinking),
+    resolved,
+  };
+}
+
+/**
+ * Initializes an AI client based on the centralized access-control decision.
+ */
+export function initializeAIClient(config?: AIConfig, isPro?: boolean, useThinking?: boolean) {
+  return resolveAIClient(config, isPro, useThinking).model;
+}
