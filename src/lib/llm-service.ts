@@ -24,7 +24,7 @@ type ProviderCandidate = {
   createModel: () => LanguageModelV1 | null;
 };
 
-const LLM_REQUEST_TIMEOUT_MS = 30_000;
+const LLM_REQUEST_TIMEOUT_MS = 60_000;
 
 function redactDiagnostic(value: unknown): string {
   const text = typeof value === 'string' ? value : JSON.stringify(value);
