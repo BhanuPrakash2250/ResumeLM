@@ -360,6 +360,9 @@ export async function createTailoredResume(
 
   const newResume = {
     ...tailoredContent,
+    education: tailoredContent.education
+      ? normalizeEducationRecords(tailoredContent.education)
+      : [],
     user_id: null,
     anonymous_session_id: user.id,
     job_id: jobId,

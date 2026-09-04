@@ -4,6 +4,7 @@ import { getResumeById } from "@/utils/actions/resumes/actions";
 import { ResumeEditorClient } from "@/components/resume/editor/resume-editor-client";
 import { Metadata } from "next";
 import { Resume } from "@/lib/types";
+import { normalizeEducationRecords } from "@/lib/education";
 
 const getResumePageData = cache(async (resumeId: string) => {
   return getResumeById(resumeId);
@@ -19,10 +20,7 @@ function normalizeResumeData(resume: Resume): Resume {
       date: exp.date || ''
     })) || [],
     // Normalize education dates
-    education: resume.education?.map(edu => ({
-      ...edu,
-      date: edu.date || ''
-    })) || [],
+    education: normalizeEducationRecords(resume.education || []),
     // Normalize project dates
     projects: resume.projects?.map(project => ({
       ...project,

@@ -10,7 +10,7 @@ export interface WorkExperience {
 export interface Education {
   school: string;
   degree: string;
-  field?: string;
+  field: string;
   location?: string;
   date: string;
   gpa?: number | string;

@@ -1,16 +1,19 @@
 import type { Education } from '@/lib/types';
 
 export function normalizeEducationRecord(
-  education: Partial<Education> & Pick<Education, 'school' | 'degree' | 'date'>,
+  education: Partial<Education>,
 ): Education {
   return {
     ...education,
+    school: education.school ?? '',
+    degree: education.degree ?? '',
     field: education.field ?? '',
+    date: education.date ?? '',
   };
 }
 
 export function normalizeEducationRecords(
-  education: Array<Partial<Education> & Pick<Education, 'school' | 'degree' | 'date'>>,
+  education: Partial<Education>[],
 ): Education[] {
   return education.map(normalizeEducationRecord);
 }

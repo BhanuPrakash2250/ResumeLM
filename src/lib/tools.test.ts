@@ -52,4 +52,13 @@ describe('education normalization', () => {
     const normalized = normalizeEducationRecords([educationWithoutField]);
     assert.deepEqual(normalized[0], { ...educationWithoutField, field: '' });
   });
+
+  it('fills missing canonical education strings without inventing content', () => {
+    assert.deepEqual(normalizeEducationRecords([{}])[0], {
+      school: '',
+      degree: '',
+      field: '',
+      date: '',
+    });
+  });
 });
