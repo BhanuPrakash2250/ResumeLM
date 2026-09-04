@@ -24,6 +24,8 @@ type ProviderCandidate = {
   createModel: () => LanguageModelV1 | null;
 };
 
+export type LLMFallbackCandidate = Pick<ProviderCandidate, 'provider' | 'model'>;
+
 const LLM_REQUEST_TIMEOUT_MS = 60_000;
 
 function redactDiagnostic(value: unknown): string {
@@ -160,6 +162,29 @@ function getProviderCandidates(): ProviderCandidate[] {
   ];
 }
 
+export async function runWithProviderFallback<T, Candidate extends LLMFallbackCandidate>(
+  candidates: readonly Candidate[],
+  operation: (candidate: Candidate) => Promise<T>,
+): Promise<T> {
+  const failures: string[] = [];
+
+  for (const candidate of candidates) {
+    const startedAt = Date.now();
+    console.info('[LLM][TRY]', { provider: candidate.provider, model: candidate.model });
+    try {
+      const result = await operation(candidate);
+      console.info('[LLM][SUCCESS]', { provider: candidate.provider, model: candidate.model, duration: Date.now() - startedAt });
+      return result;
+    } catch (error) {
+      failures.push(logProviderFailure(candidate as unknown as ProviderCandidate, error, Date.now() - startedAt));
+      const next = candidates[candidates.indexOf(candidate) + 1];
+      if (next) console.info('[LLM][FALLBACK]', { provider: next.provider, model: next.model });
+    }
+  }
+
+  throw new Error(`All configured LLM providers failed: ${failures.join('; ')}`);
+}
+
 export function createFallbackModel(): LanguageModelV1 {
   const candidates = getProviderCandidates();
   const configured = candidates
@@ -177,44 +202,24 @@ export function createFallbackModel(): LanguageModelV1 {
     model: primary.modelInstance,
     middleware: {
       wrapGenerate: async ({ params }) => {
-        const failures: string[] = [];
-        for (const candidate of configured) {
-          const startedAt = Date.now();
-          console.info('[LLM][TRY]', { provider: candidate.provider, model: candidate.model });
+        return runWithProviderFallback(configured, async (candidate) => {
           const request = withRequestTimeout(params.abortSignal);
           try {
-            const result = await candidate.modelInstance.doGenerate({ ...params, abortSignal: request.signal });
-            console.info('[LLM][SUCCESS]', { provider: candidate.provider, model: candidate.model, duration: Date.now() - startedAt });
-            return result;
-          } catch (error) {
-            failures.push(logProviderFailure(candidate, error, Date.now() - startedAt));
-            const next = configured[configured.indexOf(candidate) + 1];
-            if (next) console.info('[LLM][FALLBACK]', { provider: next.provider, model: next.model });
+            return await candidate.modelInstance.doGenerate({ ...params, abortSignal: request.signal });
           } finally {
             request.clear();
           }
-        }
-        throw new Error(`All configured LLM providers failed: ${failures.join('; ')}`);
+        });
       },
       wrapStream: async ({ params }) => {
-        const failures: string[] = [];
-        for (const candidate of configured) {
-          const startedAt = Date.now();
-          console.info('[LLM][TRY]', { provider: candidate.provider, model: candidate.model });
+        return runWithProviderFallback(configured, async (candidate) => {
           const request = withRequestTimeout(params.abortSignal);
           try {
-            const result = await candidate.modelInstance.doStream({ ...params, abortSignal: request.signal });
-            console.info('[LLM][SUCCESS]', { provider: candidate.provider, model: candidate.model, duration: Date.now() - startedAt });
-            return result;
-          } catch (error) {
-            failures.push(logProviderFailure(candidate, error, Date.now() - startedAt));
-            const next = configured[configured.indexOf(candidate) + 1];
-            if (next) console.info('[LLM][FALLBACK]', { provider: next.provider, model: next.model });
+            return await candidate.modelInstance.doStream({ ...params, abortSignal: request.signal });
           } finally {
             request.clear();
           }
-        }
-        throw new Error(`All configured LLM providers failed: ${failures.join('; ')}`);
+        });
       },
     },
   });

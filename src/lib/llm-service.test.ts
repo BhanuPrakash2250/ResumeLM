@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 
-import { formatLLMProviderStatus, getLLMProviderStatus } from "@/lib/llm-service";
+import { formatLLMProviderStatus, getLLMProviderStatus, runWithProviderFallback } from "@/lib/llm-service";
 
 const providerEnvironmentNames = [
   "NVIDIA_API_KEY",
@@ -57,5 +57,38 @@ describe("LLM provider detection", () => {
       formatLLMProviderStatus(),
       "NVIDIA_API_KEY: missing\nGROQ_API_KEY: configured\nCLOUDFLARE_ACCOUNT_ID: missing\nCLOUDFLARE_API_KEY: missing",
     );
+  });
+});
+
+describe("LLM provider fallback", () => {
+  it("falls back after an HTTP 500", async () => {
+    const attempted: string[] = [];
+    const result = await runWithProviderFallback(
+      [{ provider: "nvidia", model: "primary" }, { provider: "groq", model: "fallback" }],
+      async candidate => {
+        attempted.push(candidate.provider);
+        if (candidate.provider === "nvidia") {
+          throw Object.assign(new Error("provider returned HTTP 500"), { statusCode: 500 });
+        }
+        return "ok";
+      },
+    );
+
+    assert.equal(result, "ok");
+    assert.deepEqual(attempted, ["nvidia", "groq"]);
+  });
+
+  it("falls back after a provider timeout abort", async () => {
+    const result = await runWithProviderFallback(
+      [{ provider: "nvidia", model: "primary" }, { provider: "groq", model: "fallback" }],
+      async candidate => {
+        if (candidate.provider === "nvidia") {
+          throw Object.assign(new Error("The provider request timed out"), { name: "AbortError" });
+        }
+        return "recovered";
+      },
+    );
+
+    assert.equal(result, "recovered");
   });
 });

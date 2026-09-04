@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "check:trust": "node scripts/check-public-contracts.mjs",
-    "test": "node node_modules/.pnpm/tsx@4.19.4/node_modules/tsx/dist/cli.mjs --test \"src/**/*.test.ts\"",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit --pretty false"
   },
   "dependencies": {
@@ -133,7 +133,8 @@
     "postcss": "^8.4.49",
     "remark-gfm": "^4.0.1",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.4"
   },
   "engines": {
     "node": ">=20.0.0"

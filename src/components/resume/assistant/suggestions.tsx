@@ -285,7 +285,7 @@ function EducationSuggestion({ content: education, currentContent: currentEducat
             </span>
             {' in '}
             <span>
-              {education.field.split(/(\*\*.*?\*\*)/).map((part, i) => 
+              {(education.field ?? '').split(/(\*\*.*?\*\*)/).map((part, i) =>
                 part.startsWith('**') && part.endsWith('**') ? 
                   <strong key={i}>{part.slice(2, -2)}</strong> : 
                   part

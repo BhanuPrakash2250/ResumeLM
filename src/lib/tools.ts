@@ -3,6 +3,16 @@ import { z } from 'zod';
 import { Resume } from '@/lib/types';
 import { updateResume } from '@/utils/actions/resumes/actions';
 
+export const educationToolSchema = z.object({
+  school: z.string(),
+  degree: z.string(),
+  field: z.string().optional().default(''),
+  location: z.string().optional(),
+  date: z.string(),
+  gpa: z.string().optional(),
+  achievements: z.array(z.string()).optional(),
+});
+
 export const getResumeTool = createTool({
   description: 'Get the user Resume. Can request specific sections or "all" for the entire resume.',
   parameters: z.object({
@@ -65,21 +75,11 @@ export const suggestEducationTool = createTool({
   description: 'Suggest improvements for a specific education entry',
   parameters: z.object({
     index: z.number().describe('Index of the education entry to improve'),
-    improved_education: z.object({
-      school: z.string(),
-      degree: z.string(),
-      field: z.string(),
-      location: z.string().optional(),
-      date: z.string(),
-      gpa: z.string().optional(),
-      achievements: z.array(z.string()).optional(),
-    }).describe('Improved version of the education entry. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.'),
+    improved_education: educationToolSchema.describe('Improved version of the education entry. The field is optional when it is not present in the source data. For important keywords, format them as bold, like this: **keyword**. Put two asterisks around the keyword or phrase.'),
   }),
 });
 
-export const modifyWholeResumeTool = createTool({
-  description: 'Apply an explicit user-requested resume change immediately and persist it. Use this for any request to add, remove, or change resume content, including skills. For important keywords, format them as bold, like this: **keyword**.',
-  parameters: z.object({
+export const modifyWholeResumeParameters = z.object({
     basic_info: z.object({
       first_name: z.string().optional(),
       last_name: z.string().optional(),
@@ -98,15 +98,7 @@ export const modifyWholeResumeTool = createTool({
       description: z.array(z.string()),
       technologies: z.array(z.string()).optional(),
     })).optional(),
-    education: z.array(z.object({
-      school: z.string(),
-      degree: z.string(),
-      field: z.string(),
-      location: z.string().optional(),
-      date: z.string(),
-      gpa: z.string().optional(),
-      achievements: z.array(z.string()).optional(),
-    })).optional(),
+    education: z.array(educationToolSchema).optional(),
     skills: z.array(z.object({
       category: z.string(),
       items: z.array(z.string()),
@@ -119,7 +111,11 @@ export const modifyWholeResumeTool = createTool({
       url: z.string().optional(),
       github_url: z.string().optional(),
     })).optional(),
-  }),
+  });
+
+export const modifyWholeResumeTool = createTool({
+  description: 'Apply an explicit user-requested resume change immediately and persist it. Use this for any request to add, remove, or change resume content, including skills. For important keywords, format them as bold, like this: **keyword**.',
+  parameters: modifyWholeResumeParameters,
 });
 
 

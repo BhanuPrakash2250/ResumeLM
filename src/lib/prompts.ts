@@ -80,6 +80,7 @@ Output Requirements:
 - Include EVERY bullet point and description
 - Maintain schema structure as specified
 - Use empty strings ("") for missing fields, NEVER use null
+- Education field is optional; use an empty string when it is not present in the source data
 - Preserve all content verbatim, including minor details
 - Apply consistent formatting throughout
 - For array fields, use empty arrays ([]) when no data exists

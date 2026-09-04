@@ -61,7 +61,7 @@ export function CreateBaseResumeDialog({ children, profile }: CreateBaseResumeDi
         case 'projects':
           return (item as Project).name;
         case 'education':
-          return `${(item as Education).school}-${(item as Education).degree}-${(item as Education).field}`;
+          return `${(item as Education).school}-${(item as Education).degree}-${(item as Education).field ?? ''}`;
         case 'skills':
           return (item as Skill).category;
         default:
@@ -583,7 +583,7 @@ export function CreateBaseResumeDialog({ children, profile }: CreateBaseResumeDi
                                         )}
                                         {section.key === 'education' && (
                                           <div>
-                                            <div className="text-xs font-medium truncate">{(item as Education).degree} in {(item as Education).field}</div>
+                                            <div className="text-xs font-medium truncate">{(item as Education).degree}{(item as Education).field ? ` in ${(item as Education).field}` : ''}</div>
                                             <div className="text-xs text-gray-500">{(item as Education).school} • {(item as Education).date}</div>
                                           </div>
                                         )}

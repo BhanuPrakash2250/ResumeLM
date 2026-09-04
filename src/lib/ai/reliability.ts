@@ -27,6 +27,7 @@ export type AIErrorKind =
   | "exhausted_credits"
   | "authentication"
   | "permission_denied"
+  | "invalid_model_output"
   | "transient"
   | "unknown";
 
@@ -43,6 +44,27 @@ export interface AIProviderContext {
   modelId: string;
   apiKey: string;
   usedServerKey: boolean;
+}
+
+export function getAIErrorUserMessage(error: unknown): string {
+  const classification = classifyAIError(error);
+
+  switch (classification.kind) {
+    case "invalid_model_output":
+      return "The AI returned invalid resume data. Please try again.";
+    case "authentication":
+    case "missing_api_key":
+      return "The AI provider is not configured correctly. Please check your settings.";
+    case "transient":
+      return "The AI service is temporarily unavailable. Please try again.";
+    case "payment_required":
+    case "exhausted_credits":
+      return "The AI provider has no remaining credits. Please check your provider account.";
+    case "permission_denied":
+      return "The AI provider denied this request. Please check your provider settings.";
+    default:
+      return "The AI service is temporarily unavailable. Please try again.";
+  }
 }
 
 export class AIProviderError extends Error {
@@ -190,6 +212,19 @@ export function classifyAIError(error: unknown): AIErrorClassification {
   ) {
     return {
       kind: "permission_denied",
+      retryable: false,
+      statusCode,
+      message,
+    };
+  }
+
+  if (
+    /invalidtoolarguments|invalid tool arguments|zoderror|tool.*validation|validation.*tool|malformed.*(?:ai|model).*response/.test(
+      message,
+    )
+  ) {
+    return {
+      kind: "invalid_model_output",
       retryable: false,
       statusCode,
       message,

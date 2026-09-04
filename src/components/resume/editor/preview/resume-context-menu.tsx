@@ -87,7 +87,7 @@ export function ResumeContextMenu({ children, resume }: ResumeContextMenuProps) 
 
   const formatEducation = (edu: Education) => {
     const lines = [
-      `${edu.degree} in ${edu.field}`,
+      `${edu.degree}${edu.field ? ` in ${edu.field}` : ''}`,
       edu.school,
       edu.location ? `Location: ${edu.location}` : '',
       `Date: ${edu.date}`,

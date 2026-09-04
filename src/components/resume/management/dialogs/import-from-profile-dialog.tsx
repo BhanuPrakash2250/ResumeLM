@@ -63,7 +63,7 @@ export function ImportFromProfileDialog<T extends ImportItem>({
       return (item as Project).name;
     } else if (type === 'education') {
       const edu = item as Education;
-      return `${edu.school}-${edu.degree}-${edu.field}`;
+      return `${edu.school}-${edu.degree}-${edu.field ?? ''}`;
     } else {
       return (item as Skill).category;
     }
@@ -76,7 +76,7 @@ export function ImportFromProfileDialog<T extends ImportItem>({
       return (item as Project).name;
     } else if (type === 'education') {
       const edu = item as Education;
-      return `${edu.degree} in ${edu.field}`;
+      return `${edu.degree}${edu.field ? ` in ${edu.field}` : ''}`;
     } else {
       return (item as Skill).category;
     }

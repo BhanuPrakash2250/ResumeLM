@@ -4,6 +4,7 @@ import { type AIConfig } from '@/utils/ai-tools';
 import { AI_ASSISTANT_SYSTEM_MESSAGE } from '@/lib/prompts';
 import { LLMService } from '@/lib/llm-service';
 import { createChatTools } from '@/lib/tools';
+import { classifyAIError, getAIErrorUserMessage } from '@/lib/ai/reliability';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
       
       4. For education improvements:
          - Use 'suggest_education_improvement' with 'index' and 'improved_education' fields
-         - Always include school, degree, field, and date
+        - Always include school, degree, and date; include field only when it exists in the source data
       
       5. For viewing resume sections:
          - Use 'read_resume' with an optional 'sections' array
@@ -93,7 +94,13 @@ export async function POST(req: Request) {
           cause: redactDiagnostic(error instanceof Error ? error.cause : 'unknown'),
           duration: Date.now() - startedAt,
         });
-        return 'The AI service is temporarily unavailable. Check your provider configuration and try again.';
+        const classification = classifyAIError(error);
+        console.error('[LLM][STREAM_CLASSIFIED]', {
+          kind: classification.kind,
+          retryable: classification.retryable,
+          statusCode: classification.statusCode,
+        });
+        return getAIErrorUserMessage(error);
       },
     });
   } catch (error) {
@@ -108,7 +115,7 @@ export async function POST(req: Request) {
       duration: Date.now() - startedAt,
     });
     return new Response(
-      JSON.stringify({ error: 'The AI service is temporarily unavailable. Check your provider configuration and try again.' }),
+      JSON.stringify({ error: getAIErrorUserMessage(error) }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

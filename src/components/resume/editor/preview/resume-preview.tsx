@@ -277,7 +277,7 @@ function EducationSection({ education, settings }: { education: Education[]; set
           <div className="mb-1 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
             <div className="min-w-0">
               <div className="font-bold text-gray-950"><RichText value={item.school} /></div>
-              <div className="text-gray-950"><RichText value={`${item.degree} ${item.field}`} /></div>
+              <div className="text-gray-950"><RichText value={`${item.degree}${item.field ? ` ${item.field}` : ''}`} /></div>
             </div>
             <span className="text-right text-gray-950">{item.date}</span>
           </div>

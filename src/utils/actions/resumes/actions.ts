@@ -17,6 +17,7 @@ import {
 } from "@/lib/ai/usage-ledger";
 import { withTaskModel } from "@/lib/ai/task-models";
 import { AnalyticsEvents } from "@/lib/analytics/events";
+import { normalizeEducationRecords } from "@/lib/education";
 import {
   captureServerAnalyticsEvent,
   getAccessAnalyticsProperties,
@@ -108,10 +109,13 @@ export async function getResumeById(resumeId: string): Promise<{ resume: Resume;
 export async function updateResume(resumeId: string, data: Partial<Resume>): Promise<Resume> {
   const supabase = await createClient();
   const user = await getAnonymousUser();
+  const normalizedData: Partial<Resume> = data.education
+    ? { ...data, education: normalizeEducationRecords(data.education) }
+    : data;
 
   const { data: resume, error: updateError } = await supabase
     .from('resumes')
-    .update(data)
+    .update(normalizedData)
     .eq('id', resumeId)
     .eq('anonymous_session_id', user.id)
     .select()
